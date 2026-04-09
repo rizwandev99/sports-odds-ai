@@ -1,6 +1,8 @@
 # Sports Odds Intelligence Platform
 
-A full-stack, microservice-based web application that provides real-time, AI-generated sports odds and predictions using a feature-based logic engine, PostgreSQL, React, and Google's Gemini Tool-Calling ecosystem.
+A full-stack, microservice-based web application that provides real-time, AI-generated sports odds and predictions using a feature-based logic engine, PostgreSQL, React, and Groq's high-performance Llama 3 Tool-Calling ecosystem.
+
+![Project Walkthrough](./public/project-gif.gif)
 
 ## 🏗️ Architecture Overview
 
@@ -17,9 +19,9 @@ This project is built using a modern startup-grade microservice architecture:
 The entire application has been fully containerized. You do not need to install Node, Python, or PostgreSQL on your host machine to run this project.
 
 ### 1. Set up Environment Variables
-In the `backend` folder, create a `.env` file (or rename `.env.example` if available) and add your Gemini API Key:
+In the `backend` folder, create a `.env` file (or rename `.env.example` if available) and add your Groq API Key:
 ```env
-GEMINI_API_KEY=your_gemini_api_key_here
+GROQ_API_KEY=your_groq_api_key_here
 ```
 
 ### 2. Launch the Stack
@@ -57,7 +59,7 @@ python app.py
 ```bash
 cd backend
 npm install
-# Set your DATABASE_URL and GEMINI_API_KEY in backend/.env
+# Set your DATABASE_URL and GROQ_API_KEY in backend/.env
 npx prisma db push
 node prisma/seed.js
 node src/index.js
