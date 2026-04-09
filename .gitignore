@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+venv/
+__pycache__/
+*.pyc
+
+# Environment Files (CRITICAL FOR SECURITY)
+.env
+.env.*
+!.env.example
+
+# Docker and Volumes
+postgres_data/
+
+# OS Files
+.DS_Store
+Thumbs.db

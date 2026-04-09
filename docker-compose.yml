@@ -1,0 +1,51 @@
+services:
+
+  # ── 1. PostgreSQL Database ──────────────────────────────────────────────────
+  postgres:
+    image: postgres:17
+    container_name: sports_odds_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_DB: sports_odds_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # ── 2. Python Odds Engine ───────────────────────────────────────────────────
+  python-odds:
+    build: ./python-odds-service
+    container_name: sports_odds_python
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  # ── 3. Node.js Backend ─────────────────────────────────────────────────────
+  backend:
+    build: ./backend
+    container_name: sports_odds_backend
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres
+      - python-odds
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres123@postgres:5432/sports_odds_db
+      JWT_EXPIRES_IN: 7d
+    restart: unless-stopped
+
+  # ── 4. React Vite Frontend ───────────────────────────────────────────────────
+  frontend:
+    build: ./frontend
+    container_name: sports_odds_frontend
+    ports:
+      - "5174:5173" 
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
