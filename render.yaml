@@ -35,3 +35,5 @@ databases:
   # 4. PostgreSQL Database
   - name: sports_odds_db
     plan: free
+
+    
