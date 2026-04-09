@@ -1,15 +1,17 @@
 services:
-  # 1. Private Python ML Service (Hidden from public internet, talks only to Node)
-  - type: pserv
+  # 1. Python ML Inference Service
+  - type: web
     name: python-odds
     env: docker
+    plan: free
     dockerfilePath: python-odds-service/Dockerfile
     rootDir: python-odds-service
 
-  # 2. Public Node.js API Service
+  # 2. Node.js API Service
   - type: web
     name: sports-odds-backend
     env: docker
+    plan: free
     dockerfilePath: backend/Dockerfile
     rootDir: backend
     envVars:
@@ -17,10 +19,15 @@ services:
         fromDatabase:
           name: sports_odds_db
           property: connectionString
+      - key: PYTHON_ODDS_URL
+        fromService:
+          name: python-odds
+          type: web
+          property: host
       - key: GEMINI_API_KEY
-        sync: false # Render will ask you for this value on the dashboard
+        sync: false
 
-  # 3. Public React Frontend
+  # 3. React Frontend (Static Site - always free)
   - type: web
     name: sports-odds-frontend
     env: static
@@ -29,11 +36,9 @@ services:
     rootDir: frontend
     envVars:
       - key: VITE_API_URL
-        sync: false # Render will ask you for the Backend URL on the dashboard
+        sync: false
 
 databases:
-  # 4. PostgreSQL Database
+  # 4. PostgreSQL Database (Free - expires in 30 days)
   - name: sports_odds_db
     plan: free
-
-    
