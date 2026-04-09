@@ -2,6 +2,8 @@
 
 A full-stack, microservice-based web application that provides real-time, AI-generated sports odds and predictions using a feature-based logic engine, PostgreSQL, React, and Groq's high-performance Llama 3 Tool-Calling ecosystem.
 
+![Project Walkthrough](./public/project-gif.gif)
+
 ## 🏗️ Architecture Overview
 
 This project is built using a modern startup-grade microservice architecture:
