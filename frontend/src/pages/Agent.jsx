@@ -10,7 +10,7 @@ const SUGGESTIONS = [
 ];
 
 /**
- * Parses and renders Gemini markdown output as structured React elements.
+ * Parses and renders LLM markdown output as structured React elements.
  * Eliminates the react-markdown dependency in favour of a lightweight, crash-safe
  * custom renderer that handles bold syntax and unordered list conversion.
  */
@@ -97,7 +97,7 @@ function Agent() {
     return (
         <div className="container">
             <h1 className="page-title">AI Agent</h1>
-            <p className="page-subtitle">Ask questions about matches and odds — powered by Gemini</p>
+            <p className="page-subtitle">Ask questions about matches and odds — powered by Llama 3</p>
 
             <div className="chat-container">
                 <div className="chat-messages">

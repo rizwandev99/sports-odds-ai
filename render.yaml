@@ -24,7 +24,7 @@ services:
           name: python-odds
           type: web
           property: host
-      - key: GEMINI_API_KEY
+      - key: GROQ_API_KEY
         sync: false
 
   # 3. React Frontend (Static Site - always free)

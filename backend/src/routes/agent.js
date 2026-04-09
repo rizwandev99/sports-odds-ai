@@ -1,28 +1,31 @@
 const express = require('express');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const Groq = require('groq-sdk');
 const { PrismaClient } = require('@prisma/client');
 const authenticateToken = require('../middleware/auth');
 
 const router = express.Router();
 const prisma = new PrismaClient();
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 /**
- * AI Tool Declaration Matrix
- * Exposes the internal database schema to the LLM agent via function calling.
- * Allows autonomous on-demand data fetching to minimize prompt context window overhead
- * and guarantee real-time statistical accuracy without hardcoding knowledge constraints.
+ * AI Tool Definition
+ * Standard OpenAI-style function calling definition for Groq integration.
+ * Enables the LLM to autonomously fetch database state on-demand.
  */
-const tools = [{
-    functionDeclarations: [{
-        name: 'get_match_data',
-        description: 'Fetches all current live sports matches with team ratings from the database. Call this tool whenever you need to answer questions about specific matches, odds, teams, or predictions.',
-        parameters: {
-            type: 'object',
-            properties: {}
-        }
-    }]
-}];
+const tools = [
+    {
+        type: 'function',
+        function: {
+            name: 'get_match_data',
+            description: 'Fetches all current live sports matches with team ratings from the database. Call this tool whenever you need to answer questions about specific matches, odds, teams, or predictions.',
+            parameters: {
+                type: 'object',
+                properties: {},
+                required: [],
+            },
+        },
+    },
+];
 
 router.post('/query', authenticateToken, async (req, res) => {
     const { userQuestion } = req.body;
@@ -31,44 +34,63 @@ router.post('/query', authenticateToken, async (req, res) => {
     }
 
     try {
-        const model = genAI.getGenerativeModel({
-            model: 'gemini-2.5-flash-lite',
+        const messages = [
+            {
+                role: 'system',
+                content: 'You are a knowledgeable Sports Odds AI. Always use the get_match_data tool to fetch real data before answering sports questions. Be insightful and analytical in your responses.'
+            },
+            {
+                role: 'user',
+                content: userQuestion,
+            },
+        ];
+
+        // First chat completion request to check for tool calls
+        const response = await groq.chat.completions.create({
+            model: 'llama-3.1-8b-instant',
+            messages: messages,
             tools: tools,
-            systemInstruction: 'You are a knowledgeable Sports Odds AI. Always use the get_match_data tool to fetch real data before answering sports questions. Be insightful and analytical in your responses.'
+            tool_choice: 'auto',
+            max_tokens: 1024,
         });
 
-        const chat = model.startChat();
+        const responseMessage = response.choices[0].message;
+        const toolCalls = responseMessage.tool_calls;
 
-        const firstResult = await chat.sendMessage(userQuestion);
-        const firstResponse = firstResult.response;
-        const functionCalls = firstResponse.functionCalls?.();
+        if (toolCalls) {
+            // Groq/OpenAI flow: handle tool calls and resubmit to get final answer
+            messages.push(responseMessage); // Add assistant message with tool calls
 
-        if (functionCalls && functionCalls.length > 0) {
-            const call = functionCalls[0];
+            for (const toolCall of toolCalls) {
+                if (toolCall.function.name === 'get_match_data') {
+                    const matches = await prisma.match.findMany();
+                    const matchData = matches.map(m =>
+                        `Match ${m.id}: ${m.teamA} (rating: ${m.ratingA}) vs ${m.teamB} (rating: ${m.ratingB}) — ${m.sport} | ${m.league}`
+                    );
 
-            if (call.name === 'get_match_data') {
-                const matches = await prisma.match.findMany();
-                
-                // Map entity results into an optimized string digest for LLM context processing
-                const matchData = matches.map(m =>
-                    `Match ${m.id}: ${m.teamA} (rating: ${m.ratingA}) vs ${m.teamB} (rating: ${m.ratingB}) — ${m.sport} | ${m.league}`
-                );
-
-                const toolResult = await chat.sendMessage([{
-                    functionResponse: {
+                    messages.push({
+                        tool_call_id: toolCall.id,
+                        role: 'tool',
                         name: 'get_match_data',
-                        response: { matches: matchData }
-                    }
-                }]);
-
-                return res.json({ answer: toolResult.response.text() });
+                        content: JSON.stringify({ matches: matchData }),
+                    });
+                }
             }
+
+            // Get final response after tool execution
+            const secondResponse = await groq.chat.completions.create({
+                model: 'llama-3.1-8b-instant',
+                messages: messages,
+            });
+
+            return res.json({ answer: secondResponse.choices[0].message.content });
         }
 
-        return res.json({ answer: firstResponse.text() });
+        // If no tool calls were needed
+        return res.json({ answer: responseMessage.content });
 
     } catch (error) {
-        console.error('AI Orchestration Error:', error);
+        console.error('Groq AI Orchestration Error:', error);
         res.status(500).json({ error: 'The AI agent failed to execute the integration pipeline.' });
     }
 });
